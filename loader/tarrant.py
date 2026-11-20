@@ -30,7 +30,7 @@ def num(value):
 
 
 def rows():
-    req = urllib.request.Request(URL, headers={"User-Agent": "Mozilla/5.0 (keepmorehome loader)"})
+    req = urllib.request.Request(URL, headers={"User-Agent": "Mozilla/5.0 (county data loader)"})
     data = urllib.request.urlopen(req, timeout=300).read()
     archive = zipfile.ZipFile(io.BytesIO(data))
     with archive.open(archive.namelist()[0]) as raw:
