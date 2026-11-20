@@ -1,3 +1,3 @@
-# county-data-loader
+# bluebird-sync
 
-Nightly loader for public county appraisal data.
+Scheduled sync job.
