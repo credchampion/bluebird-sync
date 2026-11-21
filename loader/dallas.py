@@ -11,7 +11,7 @@ import tempfile
 import urllib.request
 import zipfile
 
-import psycopg
+from swap import replace_county
 
 URL = os.environ.get(
     "DCAD_URL",
@@ -57,7 +57,7 @@ def download(target):
 def rows(archive):
     homes = {}
     for r in table(archive, "ACCOUNT_APPRL_YEAR.CSV"):
-        if r["DIVISION_CD"] == "RES" and r["SPTD_CODE"] == "A11":
+        if r["DIVISION_CD"] == "RES" and r["SPTD_CODE"] in ("A11", "A12", "A13"):
             homes[r["ACCOUNT_NUM"]] = {"year": num(r["APPRAISAL_YR"]), "market": num(r["TOT_VAL"]),
                                        "appraised": num(r["HMSTD_CAP_VAL"]), "sqft": 0, "land": 0}
     for r in table(archive, "RES_DETAIL.CSV"):
@@ -100,18 +100,8 @@ def main():
         data = list(rows(zipfile.ZipFile(tmp)))
     if len(data) < MIN_ROWS:
         raise SystemExit(f"only {len(data)} rows parsed; aborting so existing data is kept")
-    mark = (len(data), sum(r[10] for r in data), sum(r[11] for r in data), sum(r[8] for r in data))
-    with psycopg.connect(os.environ["SUPABASE_DB_URL"]) as conn, conn.cursor() as cur:
-        cur.execute("select count(*), coalesce(sum(market::bigint), 0), coalesce(sum(appraised::bigint), 0), "
-                    "coalesce(sum(sqft::bigint), 0) from public.homes where county = %s", (COUNTY,))
-        if tuple(int(v) for v in cur.fetchone()) == mark:
-            print("source unchanged; nothing to load")  # skipping avoids rewriting every row each night
-            return
-        cur.execute("delete from public.homes where county = %s", (COUNTY,))
-        with cur.copy(f"copy public.homes ({COLS}) from stdin") as copy:
-            for row in data:
-                copy.write_row(row)
-        print(f"loaded {len(data)} Dallas homes")
+    changed = replace_county(COUNTY, data, COLS, 2, (10, 11, 8))
+    print(f"loaded {len(data)} Dallas homes" if changed else "source unchanged; nothing to load")
 
 
 if __name__ == "__main__":
