@@ -14,7 +14,7 @@ import psycopg
 
 URL = os.environ.get(
     "TAD_URL",
-    "https://www.tad.org/content/data-download/PropertyData_R_2025(Certified).ZIP",
+    "https://www.tad.org/content/data-download/PropertyData(Delimited)_R.ZIP",
 )
 COUNTY = "tarrant"
 MIN_ROWS = 400_000  # a short file means a bad download: abort and keep yesterday's data
@@ -42,7 +42,7 @@ def rows():
                 continue
             addr = re.sub(r"\s+", " ", f[ix["Situs_Address"]]).strip()
             sqft, market = num(f[ix["Living_Area"]]), num(f[ix["Total_Value"]])
-            if f[ix["Property_Class"]].strip() != "A1" or sqft <= 400 or market <= 20000 or not addr:
+            if f[ix["Property_Class"]].strip() not in ("A", "A1") or sqft <= 400 or market <= 20000 or not addr:
                 continue
             legal = f[ix["LegalDescription"]].strip()
             m = re.match(r"^(.*?)\s+Block\s+", legal, re.I)
