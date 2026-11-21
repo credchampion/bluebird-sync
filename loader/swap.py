@@ -4,9 +4,9 @@ import os
 
 import psycopg
 
-STEPS = 16
+STEPS = 8
 # The same bucket number, worked out in SQL here and in Python below.
-BUCKET = "('x' || substr(md5(account), 1, 2))::bit(8)::int %% 16"
+BUCKET = "('x' || substr(md5(account), 1, 2))::bit(8)::int %% 8"
 
 
 def bucket(account):
@@ -20,6 +20,7 @@ def replace_county(county, data, cols, account_ix, marks):
     """
     mark = (len(data),) + tuple(sum(row[i] for row in data) for i in marks)
     with psycopg.connect(os.environ["SUPABASE_DB_URL"], autocommit=True) as conn:
+        conn.execute("set statement_timeout = 0")  # a busy database can make one step slow
         stored = conn.execute(
             "select count(*), coalesce(sum(market::bigint), 0), coalesce(sum(appraised::bigint), 0), "
             "coalesce(sum(sqft::bigint), 0) from public.homes where county = %s", (county,)).fetchone()
